@@ -1,40 +1,57 @@
 #!/usr/bin/python3
+"""
+Exports employee tasks to a JSON file based on employee ID.
+"""
 
 import json
-
-def export_tasks_to_json(user_id, tasks):
-    """
-    Export tasks to a JSON file based on user ID.
-
-    :param user_id: User ID
-    :type user_id: str
-    :param tasks: List of tasks
-    :type tasks: list
-    """
-    # Create a dictionary to store tasks for the user
-    user_tasks = {user_id: []}
-
-    # Iterate through tasks and append relevant information to the dictionary
-    for task in tasks:
-        task_info = {
-            "task": task.get("title", ""),
-            "completed": task.get("completed", False),
-            "username": task.get("username", "")
-        }
-        user_tasks[user_id].append(task_info)
-
-    # Write the dictionary to a JSON file
-    filename = f"{user_id}.json"
-    with open(filename, "w") as json_file:
-        json.dump(user_tasks, json_file, indent=2)
+import requests
+from sys import argv
 
 if __name__ == "__main__":
-    # Example usage
-    user_id = "123"
-    tasks = [
-        {"title": "Task 1", "completed": True, "username": "john_doe"},
-        {"title": "Task 2", "completed": False, "username": "john_doe"},
-        # Add more tasks as needed
-    ]
+    """
+        request user info by employee ID
+    """
+    request_employee = requests.get(
+        'https://jsonplaceholder.typicode.com/users/{}/'.format(argv[1]))
+    """
+        convert json to dictionary
+    """
+    user = json.loads(request_employee.text)
+    """
+        extract username
+    """
+    username = user.get("username")
 
-    export_tasks_to_json(user_id, tasks)
+    """
+        request user's TODO list
+    """
+    request_todos = requests.get(
+        'https://jsonplaceholder.typicode.com/users/{}/todos'.format(argv[1]))
+    """
+        dictionary to store task status(completed) in boolean format
+    """
+    tasks = {}
+    """
+        convert json to list of dictionaries
+    """
+    user_todos = json.loads(request_todos.text)
+    """
+        loop through dictionary & get completed tasks
+    """
+    for dictionary in user_todos:
+        tasks.update({dictionary.get("title"): dictionary.get("completed")})
+
+    task_list = []
+    for k, v in tasks.items():
+        task_list.append({
+            "task": k,
+            "completed": v,
+            "username": username
+        })
+
+    json_to_dump = {argv[1]: task_list}
+    """
+        export to JSON
+    """
+    with open('{}.json'.format(argv[1]), mode='w') as file:
+        json.dump(json_to_dump, file)
